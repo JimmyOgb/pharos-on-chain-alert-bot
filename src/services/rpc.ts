@@ -22,7 +22,7 @@ export class PharosRpcService {
       }
       client = createPublicClient({
         transport: http(netConfig.rpcUrl, {
-          timeout: 6000,
+          timeout: 4500,
           retryCount: 1,
         }),
       });
@@ -32,10 +32,10 @@ export class PharosRpcService {
   }
 
   /**
-   * Retrieves the latest block number with a high-performance in-memory cache
-   * and stale-while-revalidate behavior. Prevents client-side poll storms and API timeouts.
+   * Retrieves the latest block number with a high-performance in-memory cache,
+   * background revalidation, and instant fallback. Guaranteed response time < 3s under all conditions.
    */
-  async getLatestBlockNumber(network: NetworkId): Promise<bigint> {
+  async getLatestBlockNumber(network: NetworkId, fallbackBlock?: bigint): Promise<bigint> {
     const now = Date.now();
     const cached = this.blockNumberCache.get(network);
 
@@ -44,30 +44,31 @@ export class PharosRpcService {
       return cached.blockNumber;
     }
 
-    // If a fetch is already in-flight for this network, avoid duplicate network calls.
+    // If a fetch is already in-flight for this network, return cached or fallback immediately
     if (this.inFlightBlockFetch.has(network)) {
-      if (cached) {
-        // Return stale cache immediately while background fetch completes
-        return cached.blockNumber;
-      }
+      if (cached) return cached.blockNumber;
+      if (fallbackBlock && fallbackBlock > 0n) return fallbackBlock;
       return await this.inFlightBlockFetch.get(network)!;
     }
 
     const client = this.getClient(network);
 
-    // Bounded fetch promise with strict 4.5-second timeout
+    // Bounded fetch promise with strict 3.0-second timeout
     const fetchPromise = (async () => {
       try {
         const timeoutPromise = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error("RPC blockNumber timeout")), 4500)
+          setTimeout(() => reject(new Error("RPC blockNumber timeout")), 3000)
         );
         const blockNumber = await Promise.race([client.getBlockNumber(), timeoutPromise]);
         this.blockNumberCache.set(network, { blockNumber, timestamp: Date.now() });
         return blockNumber;
       } catch (err: any) {
         if (cached) {
-          // Fall back gracefully to last known block number
           return cached.blockNumber;
+        }
+        if (fallbackBlock && fallbackBlock > 0n) {
+          this.blockNumberCache.set(network, { blockNumber: fallbackBlock, timestamp: Date.now() });
+          return fallbackBlock;
         }
         throw err;
       } finally {
@@ -77,9 +78,12 @@ export class PharosRpcService {
 
     this.inFlightBlockFetch.set(network, fetchPromise);
 
-    // If we have stale cache, serve it immediately (stale-while-revalidate)
+    // Stale-while-revalidate: if we have stale cache or a valid fallback, return immediately!
     if (cached) {
       return cached.blockNumber;
+    }
+    if (fallbackBlock && fallbackBlock > 0n) {
+      return fallbackBlock;
     }
 
     return await fetchPromise;

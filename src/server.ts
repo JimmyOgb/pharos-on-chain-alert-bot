@@ -92,9 +92,15 @@ app.get("/api/stats", async (req: Request, res: Response) => {
     const network = (req.query.network as NetworkId) || "atlantic";
     const netConfig = NETWORKS[network] || NETWORKS.atlantic;
 
-    const latestBlockBig = await rpcService.getLatestBlockNumber(network).catch(() => 0n);
+    const storedCursor = await storage.getCursor(network);
+    const fallbackBig = storedCursor && storedCursor > 0 ? BigInt(storedCursor) : 0n;
+
+    const latestBlockBig = await rpcService
+      .getLatestBlockNumber(network, fallbackBig > 0n ? fallbackBig : undefined)
+      .catch(() => fallbackBig);
+    
     const latestBlock = Number(latestBlockBig);
-    const cursor = (await storage.getCursor(network)) || latestBlock;
+    const cursor = storedCursor || latestBlock;
 
     const alerts = await storage.getAlerts();
     const activeAlerts = alerts.filter((a) => a.enabled && a.network === network);
