@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pharos On-Chain Alert Bot · Real-Time Blockchain Monitoring</title>
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="icon" href="https://atlantic.pharosscan.xyz/favicon.ico" type="image/x-icon" />
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="brand">
+        <div class="logo-badge">⚡ PHAROS</div>
+        <div class="brand-text">
+          <h1>On-Chain Alert Bot</h1>
+          <p class="subtitle">Autonomous Real-Time Monitoring & Persistent Notification Dispatcher</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <div class="network-pill" id="network-pill">
+          <span class="pulse-dot"></span>
+          <span id="header-network-name">Pharos Atlantic Testnet</span>
+          <span class="chain-badge" id="header-chain-id">Chain ID 688689</span>
+        </div>
+        <button id="btn-manual-scan" class="btn btn-primary">
+          <span class="icon">🔄</span> Scan Blocks Now
+        </button>
+      </div>
+    </header>
+
+    <!-- System Telemetry Bar -->
+    <section class="telemetry-grid">
+      <div class="metric-card">
+        <div class="metric-label">Head Block Height</div>
+        <div class="metric-value font-mono" id="stat-latest-block">—</div>
+        <div class="metric-sub" id="stat-latest-sub">Atlantic Canonical Head</div>
+      </div>
+      <div class="metric-card highlight">
+        <div class="metric-label">Last Monitored Cursor</div>
+        <div class="metric-value font-mono" id="stat-cursor-block">—</div>
+        <div class="metric-sub" id="stat-cursor-sub">Persistent Database Cursor</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Active Alert Rules</div>
+        <div class="metric-value font-mono" id="stat-active-alerts">0</div>
+        <div class="metric-sub">Configured Conditions</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Delivered Notifications</div>
+        <div class="metric-value font-mono" id="stat-delivered-events">0</div>
+        <div class="metric-sub">Verified Channel Delivery</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Deduplication Invariant</div>
+        <div class="metric-value font-mono text-cyan" id="stat-dedup-status">100% In Sync</div>
+        <div class="metric-sub">Zero Duplicate Spam</div>
+      </div>
+    </section>
+
+    <!-- Arena Quick Presets -->
+    <section class="panel preset-panel">
+      <div class="panel-header">
+        <div>
+          <h2>1. Quick Configuration Presets</h2>
+          <p class="panel-sub">Deploy verified alert conditions with one click</p>
+        </div>
+        <button id="btn-open-create-modal" class="btn btn-secondary btn-sm">
+          + Custom Alert
+        </button>
+      </div>
+      <div class="presets-grid">
+        <div class="preset-card">
+          <div class="preset-tag">USDC Whale Alert</div>
+          <h3>Atlantic Large Transfer</h3>
+          <p class="preset-desc">Alerts when Test USDC transfers exceed $50.00 USDC on Atlantic Testnet.</p>
+          <div class="preset-meta">Contract: <code>0xcfc8...fc8b</code> (6 Decimals)</div>
+          <button class="btn btn-outline btn-sm btn-preset" data-preset="usdc-whale">
+            Activate Whale Alert
+          </button>
+        </div>
+
+        <div class="preset-card">
+          <div class="preset-tag">Live Activity Sentinel</div>
+          <h3>Micro-Transfer Trigger</h3>
+          <p class="preset-desc">Monitors transfers >= $0.001 USDC for rapid verification of new activity.</p>
+          <div class="preset-meta">Condition: Value >= 1,000 atomic units</div>
+          <button class="btn btn-outline btn-sm btn-preset" data-preset="micro-transfer">
+            Activate Sentinel
+          </button>
+        </div>
+
+        <div class="preset-card">
+          <div class="preset-tag">Smart Contract Monitor</div>
+          <h3>Contract Calls & Spends</h3>
+          <p class="preset-desc">Notifies on incoming calls and interaction on the official Atlantic Paymaster.</p>
+          <div class="preset-meta">Target: Paymaster Contract (688689)</div>
+          <button class="btn btn-outline btn-sm btn-preset" data-preset="contract-calls">
+            Activate Contract Monitor
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Alert Rules Management -->
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <h2>2. Active Monitored Conditions</h2>
+          <p class="panel-sub">User-configured rules currently being scanned against incoming blocks</p>
+        </div>
+      </div>
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Rule Name</th>
+              <th>Network</th>
+              <th>Type</th>
+              <th>Target / Contract</th>
+              <th>Threshold</th>
+              <th>Channel</th>
+              <th>State</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="alerts-table-body">
+            <tr>
+              <td colspan="8" class="text-center text-muted">No alert rules configured. Use a preset above or click '+ Custom Alert'.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Real Event & Notification Feed -->
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <h2>3. Real-Time Detection Feed & Explorer Links</h2>
+          <p class="panel-sub">Genuine events detected on Pharos with delivery receipts and PharosScan links</p>
+        </div>
+        <div class="header-badges">
+          <span class="badge" id="event-count-badge">0 Events Tracked</span>
+        </div>
+      </div>
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Alert Name</th>
+              <th>Detected Event</th>
+              <th>Amount / Value</th>
+              <th>Block</th>
+              <th>Tx Hash & Explorer</th>
+              <th>Delivery Status</th>
+            </tr>
+          </thead>
+          <tbody id="events-table-body">
+            <tr>
+              <td colspan="7" class="text-center text-muted">Awaiting on-chain events. Run a block scan or wait for scheduled cron.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Scan Execution Report Panel (Shown after manual scan) -->
+    <section class="panel scan-report-panel" id="scan-report-panel" style="display: none;">
+      <div class="panel-header">
+        <h2>Latest Scan Execution Audit</h2>
+        <span class="badge live-badge" id="scan-status-badge">Complete</span>
+      </div>
+      <div class="scan-report-body" id="scan-report-content"></div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <div>
+        Pharos On-Chain Alert Bot · Built for Pharos Agent Arena ·
+        <a href="https://github.com/JimmyOgb/pharos-on-chain-alert-bot" target="_blank">GitHub Repository</a> ·
+        <a href="https://atlantic.pharosscan.xyz" target="_blank">PharosScan Explorer</a>
+      </div>
+      <div class="footer-meta">
+        No mock data · Strict persistent deduplication · $0 Serverless Architecture
+      </div>
+    </footer>
+  </div>
+
+  <!-- Modal: Create Alert -->
+  <div class="modal-overlay" id="modal-create-alert" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Configure New Alert Condition</h3>
+        <button class="btn-close" id="btn-close-modal">✕</button>
+      </div>
+      <form id="form-create-alert" class="modal-form">
+        <div class="form-group">
+          <label for="rule-name">Alert Rule Name</label>
+          <input type="text" id="rule-name" placeholder="e.g. My Large Transfer Sentinel" required />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="rule-network">Target Network</label>
+            <select id="rule-network">
+              <option value="atlantic">Pharos Atlantic Testnet (688689)</option>
+              <option value="pacific">Pharos Pacific Mainnet (1672)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="rule-type">Condition Type</label>
+            <select id="rule-type">
+              <option value="LARGE_TRANSFER">Large ERC-20 Transfer</option>
+              <option value="CONTRACT_CALL">Contract Call / Activity</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="rule-contract">Monitored Contract Address</label>
+          <input type="text" id="rule-contract" placeholder="0xcfc8330f4bcab529c625d12781b1c19466a9fc8b (Test USDC)" />
+          <small class="form-hint">Leave blank to monitor any token transfer exceeding threshold.</small>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="rule-threshold">Minimum Threshold Amount</label>
+            <input type="text" id="rule-threshold" placeholder="10.0" value="10.0" required />
+          </div>
+          <div class="form-group">
+            <label for="rule-channel">Notification Channel</label>
+            <select id="rule-channel">
+              <option value="TELEGRAM">Telegram Bot</option>
+              <option value="DISCORD">Discord Webhook</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="rule-target">Destination Chat ID / Webhook URL (Optional)</label>
+          <input type="text" id="rule-target" placeholder="Leave empty to use server default" />
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" id="btn-cancel-modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Alert Rule</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

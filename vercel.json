@@ -1,0 +1,19 @@
+{
+  "version": 2,
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api"
+    },
+    {
+      "source": "/health",
+      "destination": "/api"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/monitor",
+      "schedule": "* * * * *"
+    }
+  ]
+}
