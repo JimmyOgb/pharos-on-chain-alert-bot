@@ -10,6 +10,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnManualScan = document.getElementById("btn-manual-scan");
   const scanReportPanel = document.getElementById("scan-report-panel");
   const scanReportContent = document.getElementById("scan-report-content");
+  const headerSyncStatus = document.getElementById("header-sync-status");
+  const headerPulseDot = document.getElementById("header-pulse-dot");
 
   // Modal Elements
   const modalCreateAlert = document.getElementById("modal-create-alert");
@@ -20,30 +22,97 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let currentNetwork = "atlantic";
 
-  // Initial Load
-  refreshDashboard();
-  loadAlerts();
-  loadEvents();
+  // Polling State Controls
+  let isPolling = false;
+  let pollBackoffMs = 8000;
+  const NORMAL_POLL_INTERVAL = 8000;
+  const MAX_POLL_INTERVAL = 30000;
+  let activePollTimer = null;
 
-  // Polling intervals
-  setInterval(refreshDashboard, 8000);
-  setInterval(loadEvents, 10000);
+  // Resilient Fetch with AbortController Timeout Guard
+  async function fetchWithTimeout(url, options = {}, timeoutMs = 7000) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(url, { ...options, signal: controller.signal });
+      clearTimeout(timer);
+      return res;
+    } catch (err) {
+      clearTimeout(timer);
+      throw err;
+    }
+  }
+
+  // Update Connectivity Badge in Header
+  function updateSyncStatus(status, retrySec = null) {
+    if (!headerSyncStatus) return;
+    if (status === "ONLINE") {
+      headerSyncStatus.textContent = "Live";
+      headerSyncStatus.style.background = "rgba(16, 185, 129, 0.2)";
+      headerSyncStatus.style.color = "#10b981";
+      headerSyncStatus.style.borderColor = "rgba(16, 185, 129, 0.4)";
+      if (headerPulseDot) headerPulseDot.style.background = "#10b981";
+    } else if (status === "SYNCING") {
+      headerSyncStatus.textContent = "Syncing";
+      headerSyncStatus.style.background = "rgba(56, 189, 248, 0.2)";
+      headerSyncStatus.style.color = "#38bdf8";
+      headerSyncStatus.style.borderColor = "rgba(56, 189, 248, 0.4)";
+      if (headerPulseDot) headerPulseDot.style.background = "#38bdf8";
+    } else if (status === "DEGRADED") {
+      headerSyncStatus.textContent = retrySec ? `Retry in ${retrySec}s` : "Degraded";
+      headerSyncStatus.style.background = "rgba(245, 158, 11, 0.2)";
+      headerSyncStatus.style.color = "#f59e0b";
+      headerSyncStatus.style.borderColor = "rgba(245, 158, 11, 0.4)";
+      if (headerPulseDot) headerPulseDot.style.background = "#f59e0b";
+    }
+  }
+
+  // Self-Paced Polling Cycle with Exponential Backoff and Concurrency Guard
+  async function runPollCycle() {
+    if (isPolling) return;
+    isPolling = true;
+
+    try {
+      updateSyncStatus("SYNCING");
+      await refreshDashboard();
+      await loadEvents();
+      pollBackoffMs = NORMAL_POLL_INTERVAL;
+      updateSyncStatus("ONLINE");
+    } catch (err) {
+      console.warn("Poll cycle degraded:", err.message);
+      pollBackoffMs = Math.min(pollBackoffMs * 1.5, MAX_POLL_INTERVAL);
+      updateSyncStatus("DEGRADED", Math.round(pollBackoffMs / 1000));
+    } finally {
+      isPolling = false;
+      activePollTimer = setTimeout(runPollCycle, pollBackoffMs);
+    }
+  }
+
+  // Initial Load
+  loadAlerts();
+  runPollCycle();
 
   // ==============================================================
   // 1. DASHBOARD TELEMETRY
   // ==============================================================
   async function refreshDashboard() {
     try {
-      const res = await fetch(`/api/stats?network=${currentNetwork}`);
-      if (!res.ok) return;
+      const res = await fetchWithTimeout(`/api/stats?network=${currentNetwork}`, {}, 6000);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
 
-      statLatestBlock.textContent = data.latestBlock ? data.latestBlock.toLocaleString() : "—";
-      statCursorBlock.textContent = data.lastMonitoredBlock ? data.lastMonitoredBlock.toLocaleString() : "—";
+      if (data.latestBlock) {
+        statLatestBlock.textContent = data.latestBlock.toLocaleString();
+      }
+      if (data.lastMonitoredBlock) {
+        statCursorBlock.textContent = data.lastMonitoredBlock.toLocaleString();
+      }
       statActiveAlerts.textContent = data.activeAlertsCount || 0;
       statDeliveredEvents.textContent = data.totalDelivered || 0;
+      return data;
     } catch (err) {
-      console.warn("Telemetry refresh error:", err);
+      console.warn("Telemetry refresh error:", err.message);
+      throw err;
     }
   }
 
@@ -52,7 +121,8 @@ document.addEventListener("DOMContentLoaded", () => {
   // ==============================================================
   async function loadAlerts() {
     try {
-      const res = await fetch("/api/alerts");
+      const res = await fetchWithTimeout("/api/alerts", {}, 6000);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       const alerts = data.alerts || [];
 
@@ -98,7 +168,7 @@ document.addEventListener("DOMContentLoaded", () => {
         )
         .join("");
     } catch (err) {
-      console.error("Failed to load alerts:", err);
+      console.error("Failed to load alerts:", err.message);
     }
   }
 
@@ -107,7 +177,8 @@ document.addEventListener("DOMContentLoaded", () => {
   // ==============================================================
   async function loadEvents() {
     try {
-      const res = await fetch("/api/events?limit=30");
+      const res = await fetchWithTimeout("/api/events?limit=30", {}, 6000);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       const events = data.events || [];
 
@@ -151,7 +222,8 @@ document.addEventListener("DOMContentLoaded", () => {
         })
         .join("");
     } catch (err) {
-      console.error("Failed to load events:", err);
+      console.warn("Failed to load events:", err.message);
+      throw err;
     }
   }
 
@@ -164,7 +236,7 @@ document.addEventListener("DOMContentLoaded", () => {
     scanReportPanel.style.display = "none";
 
     try {
-      const res = await fetch("/api/monitor?network=atlantic", { method: "POST" });
+      const res = await fetchWithTimeout("/api/monitor?network=atlantic", { method: "POST" }, 25000);
       const data = await res.json();
 
       if (data.status === "success" && data.report) {

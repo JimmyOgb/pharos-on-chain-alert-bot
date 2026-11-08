@@ -87,6 +87,7 @@ app.get("/health", async (req: Request, res: Response) => {
 // 2. DASHBOARD LIVE TELEMETRY
 // ============================================================================
 app.get("/api/stats", async (req: Request, res: Response) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
   try {
     const network = (req.query.network as NetworkId) || "atlantic";
     const netConfig = NETWORKS[network] || NETWORKS.atlantic;
@@ -130,6 +131,7 @@ app.get("/api/stats", async (req: Request, res: Response) => {
 // 3. ALERT RULES MANAGEMENT
 // ============================================================================
 app.get("/api/alerts", async (_req: Request, res: Response) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
   try {
     const alerts = await storage.getAlerts();
     res.json({ alerts });
@@ -238,6 +240,7 @@ app.delete("/api/alerts/:id", async (req: Request, res: Response) => {
 // 4. EVENT HISTORY & DEDUPLICATION AUDIT
 // ============================================================================
 app.get("/api/events", async (req: Request, res: Response) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
   try {
     const limit = parseInt(req.query.limit as string, 10) || 50;
     const events = await storage.getRecentEvents(limit);
