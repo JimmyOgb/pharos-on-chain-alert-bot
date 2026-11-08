@@ -290,8 +290,9 @@ app.post("/api/test-notify", async (req: Request, res: Response) => {
 
 // Export app for Vercel serverless / local start
 export { app };
+export default app;
 
-if (process.env.NODE_ENV !== "test") {
+if (process.env.NODE_ENV !== "test" && !process.env.VERCEL) {
   app.listen(CONFIG.PORT, () => {
     console.log(`=======================================================`);
     console.log(`Pharos On-Chain Alert Bot live on http://localhost:${CONFIG.PORT}`);
