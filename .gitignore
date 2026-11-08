@@ -8,3 +8,5 @@ data-test/
 *.log
 .DS_Store
 .vercel
+
+.vercel

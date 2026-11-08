@@ -9,6 +9,7 @@ import { dispatcher } from "./services/dispatcher.js";
 import { rpcService } from "./services/rpc.js";
 import { scanner } from "./services/scanner.js";
 import { AlertRule, NetworkId } from "./types.js";
+import { DASHBOARD_HTML, DASHBOARD_CSS, DASHBOARD_JS } from "./views.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -17,9 +18,29 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Serve static frontend files
-const publicDir = path.resolve(__dirname, "../public");
-app.use(express.static(publicDir));
+// Explicit Static and Dashboard Routes (Guaranteed 100% serverless safe without filesystem dependencies)
+app.get("/", (_req: Request, res: Response) => {
+  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  res.send(DASHBOARD_HTML);
+});
+
+app.get("/style.css", (_req: Request, res: Response) => {
+  res.setHeader("Content-Type", "text/css; charset=utf-8");
+  res.send(DASHBOARD_CSS);
+});
+
+app.get("/app.js", (_req: Request, res: Response) => {
+  res.setHeader("Content-Type", "application/javascript; charset=utf-8");
+  res.send(DASHBOARD_JS);
+});
+
+// Serve static frontend files fallback
+try {
+  const publicDir = path.resolve(__dirname, "../public");
+  app.use(express.static(publicDir));
+} catch {
+  // Ignore in serverless
+}
 
 // Initialize storage on startup
 storage.init().catch((err) => console.error("Storage initialization error:", err));
@@ -265,11 +286,6 @@ app.post("/api/test-notify", async (req: Request, res: Response) => {
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
-});
-
-// Default root redirect to dashboard
-app.get("/", (_req: Request, res: Response) => {
-  res.sendFile(path.join(publicDir, "index.html"));
 });
 
 // Export app for Vercel serverless / local start
