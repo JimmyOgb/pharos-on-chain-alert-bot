@@ -7,6 +7,16 @@ data/
 data-test/
 *.log
 .DS_Store
-.vercel
+demo/raw/
+demo/raw_video/
+demo/audio/
+demo/*.mp4
+*.wav
+*.mp3
 
-.vercel
+demo/raw/
+demo/raw_video/
+demo/audio/
+demo/*.mp4
+*.wav
+*.mp3

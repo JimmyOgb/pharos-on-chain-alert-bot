@@ -1,0 +1,39 @@
+1
+00:00:00,000 --> 00:00:06,868
+Welcome to the official demonstration of the Pharos On-Chain Alert Bot, built for the Pharos Agent Arena.
+
+2
+00:00:06,868 --> 00:00:19,330
+This autonomous monitoring agent tracks live blockchain events on the Pharos Atlantic Testnet, verifies configurable conditions, and delivers real-time notifications with zero repeat spam.
+
+3
+00:00:19,330 --> 00:00:34,286
+Here on the production dashboard, we see live network telemetry connected to Atlantic Testnet at Chain ID 688689, with continuous block tracking and active deduplication safeguards.
+
+4
+00:00:34,286 --> 00:00:45,314
+First, we activate a pre-configured alert condition: the Atlantic USDC Whale Alert, monitoring Test USDC transfers exceeding fifty dollars.
+
+5
+00:00:45,314 --> 00:00:57,476
+Next, we create a custom alert condition through the configuration modal, specifying an Atlantic Micro-Activity Sentinel tracking transfers of zero point zero zero one USDC.
+
+6
+00:00:57,476 --> 00:01:08,109
+Now, let's trigger a live on-chain block scan. The scanner evaluates recent Atlantic Testnet blocks directly against the official DP Labs RPC.
+
+7
+00:01:08,109 --> 00:01:17,501
+The scan audit report appears instantly, confirming the exact block range, evaluated logs, and serverless execution latency.
+
+8
+00:01:17,501 --> 00:01:32,038
+Crucially, our system enforces a deterministic deduplication invariant. When a consecutive scan executes over the same blocks, existing events are recognized and deduplicated, preventing any duplicate spam.
+
+9
+00:01:32,038 --> 00:01:42,841
+Every detected alert includes full event context: transaction activity, formatted values, block numbers, and verified clickable PharosScan explorer links.
+
+10
+00:01:42,841 --> 00:01:56,213
+With a zero-cost serverless architecture, comprehensive test coverage, and transparent execution, the Pharos On-Chain Alert Bot delivers enterprise-grade blockchain monitoring. Thank you.
