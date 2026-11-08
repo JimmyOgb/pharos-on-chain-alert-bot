@@ -13,7 +13,7 @@
   "crons": [
     {
       "path": "/api/monitor",
-      "schedule": "* * * * *"
+      "schedule": "0 0 * * *"
     }
   ]
 }
